@@ -106,7 +106,11 @@ def fetch_results(table_html):
         away_name  = away["team"]["displayName"]
         home_score = home.get("score", {}).get("displayValue", "?")
         away_score = away.get("score", {}).get("displayValue", "?")
-        comp_name  = competition.get("type", {}).get("text", "") or "Unknown Competition"
+        comp_name  = (
+            competition.get("type", {}).get("text", "")
+            or event.get("league", {}).get("name", "")
+            or "Unknown Competition"
+        )
         event_id   = event.get("id", "")
         link       = "https://www.espn.co.uk/football/match/_/gameId/" + event_id
         is_home    = TEAM_NAME in home_name
