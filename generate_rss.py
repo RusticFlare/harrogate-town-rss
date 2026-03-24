@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 TEAM_ID   = "19262"
 TEAM_NAME = "Harrogate Town"
 ESPN_API  = (
-    f"https://site.api.espn.com/apis/site/v2/sports/soccer/"
-    f"eng.4/teams/{TEAM_ID}/schedule"
+    "https://site.api.espn.com/apis/site/v2/sports/soccer/"
+    "eng.4/teams/" + TEAM_ID + "/schedule"
 )
 
 def fetch_results():
@@ -25,7 +25,6 @@ def fetch_results():
         except Exception:
             continue
 
-        # Only include matches that have already been played
         if date >= now:
             continue
 
@@ -39,13 +38,11 @@ def fetch_results():
 
         home_name  = home["team"]["displayName"]
         away_name  = away["team"]["displayName"]
-
-        # Score is a dict with a displayValue field
         home_score = home.get("score", {}).get("displayValue", "?")
         away_score = away.get("score", {}).get("displayValue", "?")
 
         event_id    = event.get("id", "")
-        link        = f"https://www.espn.co.uk/football/match/_/gameId/{event_id}"
+        link        = "https://www.espn.co.uk/football/match/_/gameId/" + event_id
         is_home     = TEAM_NAME in home_name
         venue_label = "H" if is_home else "A"
         opp         = away_name if is_home else home_name
@@ -54,21 +51,22 @@ def fetch_results():
             hs, as_ = int(home_score), int(away_score)
             if is_home:
                 outcome = "W" if hs > as_ else ("D" if hs == as_ else "L")
-                score   = f"{hs}–{as_}"
+                score   = str(hs) + "-" + str(as_)
             else:
                 outcome = "W" if as_ > hs else ("D" if hs == as_ else "L")
-                score   = f"{as_}–{hs}"
+                score   = str(as_) + "-" + str(hs)
         except ValueError:
             outcome = "?"
-            score   = f"{home_score}–{away_score}"
+            score   = home_score + "-" + away_score
 
         title = (
-            f"[{outcome}] {TEAM_NAME} {score} {opp} "
-            f"({venue_label}) – {date.strftime('%d %b %Y')}"
+            "[" + outcome + "] " + TEAM_NAME + " " + score + " " + opp +
+            " (" + venue_label + ") - " + date.strftime("%d %b %Y")
         )
         description = (
-            f"Full-time: {home_name} {home_score}–{away_score} {away_name}. "
-            f"{date.strftime('%A %-d %B %Y')}."
+            "Full-time: " + home_name + " " + home_score +
+            "-" + away_score + " " + away_name + ". " +
+            date.strftime("%A %d %B %Y") + "."
         )
 
         results.append({
@@ -88,7 +86,39 @@ def generate_rss(results):
     rss.set("version", "2.0")
     channel = ET.SubElement(rss, "channel")
 
-    ET.SubElement(channel, "title").text = "Harrogate Town FC – Recent Results"
+    ET.SubElement(channel, "title").text = "Harrogate Town FC - Recent Results"
     ET.SubElement(channel, "link").text  = "https://www.harrogatetownafc.com/"
     ET.SubElement(channel, "description").text = (
-        "Latest match results for Harrogate Town FC (EFL League Tw
+        "Latest match results for Harrogate Town FC (EFL League Two)"
+    )
+    ET.SubElement(channel, "language").text      = "en-gb"
+    ET.SubElement(channel, "lastBuildDate").text = (
+        datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
+    )
+
+    for r in results:
+        item = ET.SubElement(channel, "item")
+        ET.SubElement(item, "title").text       = r["title"]
+        ET.SubElement(item, "link").text        = r["link"]
+        ET.SubElement(item, "description").text = r["description"]
+        ET.SubElement(item, "pubDate").text     = (
+            r["date"].strftime("%a, %d %b %Y %H:%M:%S +0000")
+        )
+        ET.SubElement(item, "guid").text        = r["guid"]
+
+    tree = ET.ElementTree(rss)
+    ET.indent(tree, space="  ")
+
+    with open("rss.xml", "wb") as f:
+        f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
+        tree.write(f, encoding="utf-8", xml_declaration=False)
+
+    print("rss.xml written with " + str(len(results)) + " results.")
+
+
+if __name__ == "__main__":
+    results = fetch_results()
+    if not results:
+        print("WARNING: No results found.")
+    else:
+        generate_rss(results)
