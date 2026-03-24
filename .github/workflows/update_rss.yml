@@ -2,8 +2,18 @@ name: Update Harrogate Town RSS Feed
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # runs every 6 hours
-  workflow_dispatch:          # lets you trigger it manually too
+    # Winter (GMT, UTC+0) — uncomment these, comment out BST below
+    - cron: "0 15 * * *"
+    - cron: "30 17 * * *"
+    - cron: "0 20 * * *"
+    - cron: "30 22 * * *"
+
+    # Summer (BST, UTC+1) — uncomment these, comment out GMT above
+    # - cron: "0 14 * * *"
+    # - cron: "30 16 * * *"
+    # - cron: "0 19 * * *"
+    # - cron: "30 21 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
