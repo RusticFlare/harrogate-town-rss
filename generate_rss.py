@@ -55,32 +55,39 @@ def format_standings_table(rows):
     if not rows:
         return ""
 
-    lines = []
-    lines.append("League Two Table:")
-    lines.append(
-        "{:<4} {:<22} {:>2} {:>2} {:>2} {:>2} {:>4} {:>3}".format(
-            "Pos", "Team", "P", "W", "D", "L", "GD", "Pts"
-        )
-    )
-    lines.append("-" * 46)
+    html  = "<table>\n"
+    html += "  <thead>\n"
+    html += "    <tr>"
+    html += "<th>Pos</th>"
+    html += "<th>Team</th>"
+    html += "<th>P</th>"
+    html += "<th>W</th>"
+    html += "<th>D</th>"
+    html += "<th>L</th>"
+    html += "<th>GD</th>"
+    html += "<th>Pts</th>"
+    html += "</tr>\n"
+    html += "  </thead>\n"
+    html += "  <tbody>\n"
 
     for r in rows:
-        marker = ">" if TEAM_NAME in r["team"] else " "
-        lines.append(
-            "{}{:<3} {:<22} {:>2} {:>2} {:>2} {:>2} {:>4} {:>3}".format(
-                marker,
-                str(r["pos"]),
-                r["team"][:22],
-                str(r["played"]),
-                str(r["won"]),
-                str(r["drawn"]),
-                str(r["lost"]),
-                str(r["gd"]),
-                str(r["points"]),
-            )
-        )
+        is_harrogate = TEAM_NAME in r["team"]
+        style = " style=\"font-weight: bold; background-color: #fff3cd;\"" if is_harrogate else ""
+        html += "    <tr" + style + ">"
+        html += "<td>" + str(r["pos"])    + "</td>"
+        html += "<td>" + str(r["team"])   + "</td>"
+        html += "<td>" + str(r["played"]) + "</td>"
+        html += "<td>" + str(r["won"])    + "</td>"
+        html += "<td>" + str(r["drawn"])  + "</td>"
+        html += "<td>" + str(r["lost"])   + "</td>"
+        html += "<td>" + str(r["gd"])     + "</td>"
+        html += "<td>" + str(r["points"]) + "</td>"
+        html += "</tr>\n"
 
-    return "\n".join(lines)
+    html += "  </tbody>\n"
+    html += "</table>"
+
+    return html
 
 
 def fetch_results(standings_table):
@@ -144,16 +151,16 @@ def fetch_results(standings_table):
         )
 
         description = (
-            "Full-time: " + home_name + " " + home_score +
-            "-" + away_score + " " + away_name + ". " +
-            date.strftime("%A %d %B %Y") + "."
+            "<p><strong>Full-time:</strong> " + home_name + " " + home_score +
+            "-" + away_score + " " + away_name + "<br/>" +
+            date.strftime("%A %d %B %Y") + "</p>"
         )
 
         is_league = any(
             kw in comp_name.lower() for kw in LEAGUE_COMP_KEYWORDS
         )
         if is_league and standings_table:
-            description += "\n\n" + standings_table
+            description += "\n<h3>League Two Table</h3>\n" + standings_table
 
         results.append({
             "title":       title,
@@ -184,20 +191,33 @@ def generate_rss(results):
 
     for r in results:
         item = ET.SubElement(channel, "item")
-        ET.SubElement(item, "title").text       = r["title"]
-        ET.SubElement(item, "link").text        = r["link"]
-        ET.SubElement(item, "description").text = r["description"]
-        ET.SubElement(item, "pubDate").text     = (
+        ET.SubElement(item, "title").text = r["title"]
+        ET.SubElement(item, "link").text  = r["link"]
+
+        # Use CDATA so HTML in the description isn't entity-escaped
+        desc = ET.SubElement(item, "description")
+        desc.text = None
+        desc.append(ET.Comment(" --><![CDATA[" + r["description"] + "]]><!-- "))
+
+        ET.SubElement(item, "pubDate").text = (
             r["date"].strftime("%a, %d %b %Y %H:%M:%S +0000")
         )
-        ET.SubElement(item, "guid").text        = r["guid"]
+        ET.SubElement(item, "guid").text = r["guid"]
 
     tree = ET.ElementTree(rss)
     ET.indent(tree, space="  ")
 
-    with open("rss.xml", "wb") as f:
-        f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
-        tree.write(f, encoding="utf-8", xml_declaration=False)
+    # ET.Comment wrapping produces slightly malformed CDATA, so fix it
+    raw = ET.tostring(rss, encoding="unicode")
+    raw = raw.replace(
+        "<!-- --><![CDATA[", "<![CDATA["
+    ).replace(
+        "]]><!-- -->", "]]>"
+    )
+
+    with open("rss.xml", "w", encoding="utf-8") as f:
+        f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        f.write(raw)
 
     print("rss.xml written with " + str(len(results)) + " results.")
 
