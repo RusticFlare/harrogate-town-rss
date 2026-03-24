@@ -2,36 +2,38 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
+# ── Configuration ────────────────────────────────────────────────────────────
+
 TEAM_ID   = "19262"
 TEAM_NAME = "Harrogate Town"
-ESPN_API  = (
-    "https://site.api.espn.com/apis/site/v2/sports/soccer/"
-    "eng.4/teams/" + TEAM_ID + "/schedule"
-)
-STANDINGS_API = (
-    "https://site.api.espn.com/apis/v2/sports/soccer/eng.4/standings"
-)
-LEAGUE_COMP_KEYWORDS = ["league two", "league 2"]
+LEAGUE_ID = "eng.4"  # ESPN league slug, e.g. eng.1 (Premier League),
+                     # eng.2 (Championship), eng.3 (League One), eng.4 (League Two)
 
+# Keywords used to identify league matches (for standings table)
+# Should match part of the competition name returned by ESPN
+LEAGUE_KEYWORDS = ["league two"]
+
+# How many results to include in the feed
+MAX_RESULTS = 20
+
+# ── ESPN API endpoints (derived from config above) ───────────────────────────
+
+SCHEDULE_URL  = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE_ID}/teams/{TEAM_ID}/schedule"
+STANDINGS_URL = f"https://site.api.espn.com/apis/v2/sports/soccer/{LEAGUE_ID}/standings"
+
+# ── Standings ─────────────────────────────────────────────────────────────────
 
 def fetch_standings():
     try:
-        resp = requests.get(STANDINGS_API, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        return None
-
-    try:
+        data = requests.get(STANDINGS_URL, timeout=10).json()
         entries = data["children"][0]["standings"]["entries"]
-    except (KeyError, IndexError):
-        return None
+    except Exception:
+        return []
 
     rows = []
     for entry in entries:
         team  = entry.get("team", {}).get("displayName", "?")
-        stats = {s["name"]: s.get("displayValue", "?")
-                 for s in entry.get("stats", [])}
+        stats = {s["name"]: s.get("displayValue", "?") for s in entry.get("stats", [])}
         rows.append({
             "pos":    stats.get("rank", "?"),
             "team":   team,
@@ -43,77 +45,62 @@ def fetch_standings():
             "points": stats.get("points", "?"),
         })
 
-    try:
-        rows.sort(key=lambda r: int(r["pos"]))
-    except (ValueError, TypeError):
-        pass
-
+    rows.sort(key=lambda r: int(r["pos"]) if str(r["pos"]).isdigit() else 99)
     return rows
 
 
-def format_standings_table(rows):
+def standings_html(rows):
     if not rows:
         return ""
 
-    html  = "<table>\n"
-    html += "  <thead>\n"
-    html += "    <tr>"
-    html += "<th>Pos</th>"
-    html += "<th>Team</th>"
-    html += "<th>P</th>"
-    html += "<th>W</th>"
-    html += "<th>D</th>"
-    html += "<th>L</th>"
-    html += "<th>GD</th>"
-    html += "<th>Pts</th>"
-    html += "</tr>\n"
-    html += "  </thead>\n"
-    html += "  <tbody>\n"
+    def th(label):
+        return "<th>" + label + "</th>"
+
+    def td(value, bold=False):
+        return ("<td><strong>" + str(value) + "</strong></td>") if bold else ("<td>" + str(value) + "</td>")
+
+    html  = "<table>\n<thead><tr>"
+    html += th("Pos") + th("Team") + th("P") + th("W") + th("D") + th("L") + th("GD") + th("Pts")
+    html += "</tr></thead>\n<tbody>\n"
 
     for r in rows:
-        is_harrogate = TEAM_NAME in r["team"]
-        style = " style=\"font-weight: bold; background-color: #fff3cd;\"" if is_harrogate else ""
-        html += "    <tr" + style + ">"
-        html += "<td>" + str(r["pos"])    + "</td>"
-        html += "<td>" + str(r["team"])   + "</td>"
-        html += "<td>" + str(r["played"]) + "</td>"
-        html += "<td>" + str(r["won"])    + "</td>"
-        html += "<td>" + str(r["drawn"])  + "</td>"
-        html += "<td>" + str(r["lost"])   + "</td>"
-        html += "<td>" + str(r["gd"])     + "</td>"
-        html += "<td>" + str(r["points"]) + "</td>"
+        is_our_team = TEAM_NAME in r["team"]
+        style       = " style=\"font-weight:bold; background-color:#fff3cd;\"" if is_our_team else ""
+        html += "<tr" + style + ">"
+        html += td(r["pos"]) + td(r["team"]) + td(r["played"]) + td(r["won"])
+        html += td(r["drawn"]) + td(r["lost"]) + td(r["gd"]) + td(r["points"])
         html += "</tr>\n"
 
-    html += "  </tbody>\n"
-    html += "</table>"
-
+    html += "</tbody>\n</table>"
     return html
 
 
-def fetch_results(standings_table):
-    resp = requests.get(ESPN_API, timeout=10)
-    resp.raise_for_status()
-    data = resp.json()
+# ── Results ───────────────────────────────────────────────────────────────────
+
+def fetch_results(table_html):
+    try:
+        data = requests.get(SCHEDULE_URL, timeout=10).json()
+    except Exception:
+        return []
 
     now     = datetime.now(timezone.utc)
     results = []
 
     for event in data.get("events", []):
+        # Parse date
         try:
-            date = datetime.fromisoformat(
-                event["date"].replace("Z", "+00:00")
-            )
+            date = datetime.fromisoformat(event["date"].replace("Z", "+00:00"))
         except Exception:
             continue
 
+        # Skip future matches
         if date >= now:
             continue
 
         competition = event.get("competitions", [{}])[0]
         competitors = competition.get("competitors", [])
-
-        home = next((c for c in competitors if c["homeAway"] == "home"), None)
-        away = next((c for c in competitors if c["homeAway"] == "away"), None)
+        home        = next((c for c in competitors if c["homeAway"] == "home"), None)
+        away        = next((c for c in competitors if c["homeAway"] == "away"), None)
         if not home or not away:
             continue
 
@@ -121,112 +108,78 @@ def fetch_results(standings_table):
         away_name  = away["team"]["displayName"]
         home_score = home.get("score", {}).get("displayValue", "?")
         away_score = away.get("score", {}).get("displayValue", "?")
+        comp_name  = competition.get("type", {}).get("text", "") or "Unknown Competition"
+        event_id   = event.get("id", "")
+        link       = "https://www.espn.co.uk/football/match/_/gameId/" + event_id
+        is_home    = TEAM_NAME in home_name
+        opp        = away_name if is_home else home_name
 
-        comp_name = (
-            competition.get("type", {}).get("text", "")
-            or event.get("league", {}).get("name", "Unknown Competition")
-        )
-
-        event_id = event.get("id", "")
-        link     = "https://www.espn.co.uk/football/match/_/gameId/" + event_id
-        is_home  = TEAM_NAME in home_name
-        opp      = away_name if is_home else home_name
-
+        # Determine outcome from our team's perspective
         try:
             hs, as_ = int(home_score), int(away_score)
-            if is_home:
-                outcome = "W" if hs > as_ else ("D" if hs == as_ else "L")
-                title = (
-                    "[" + outcome + "] " + TEAM_NAME + " " + str(hs) + "-" + str(as_) + " " + opp +
-                    " - " + comp_name +
-                    " - " + date.strftime("%d %b %Y")
-                )
-            else:
-                outcome = "W" if as_ > hs else ("D" if hs == as_ else "L")
-                title = (
-                    "[" + outcome + "] " + opp + " " + str(hs) + "-" + str(as_) + " " + TEAM_NAME +
-                    " - " + comp_name +
-                    " - " + date.strftime("%d %b %Y")
-                )
+            our_score, opp_score = (hs, as_) if is_home else (as_, hs)
+            outcome = "W" if our_score > opp_score else ("D" if our_score == opp_score else "L")
         except ValueError:
+            hs = as_ = our_score = opp_score = None
             outcome = "?"
-            if is_home:
-                title = (
-                    "[?] " + TEAM_NAME + " " + home_score + "-" + away_score + " " + opp +
-                    " - " + comp_name +
-                    " - " + date.strftime("%d %b %Y")
-                )
-            else:
-                title = (
-                    "[?] " + opp + " " + away_score + "-" + home_score + " " + TEAM_NAME +
-                    " - " + comp_name +
-                    " - " + date.strftime("%d %b %Y")
-                )
 
+        # Title: home team first, then away team
+        score_str = (str(hs) + "-" + str(as_)) if hs is not None else (home_score + "-" + away_score)
+        title = (
+            "[" + outcome + "] " +
+            home_name + " " + score_str + " " + away_name +
+            " - " + comp_name +
+            " - " + date.strftime("%d %b %Y")
+        )
+
+        # Description: result line + standings for league matches
         description = (
-            "<p><strong>Full-time:</strong> " + home_name + " " + home_score +
-            "-" + away_score + " " + away_name + "<br/>" +
-            date.strftime("%A %d %B %Y") + "</p>"
+            "<p><strong>Full-time:</strong> " +
+            home_name + " " + home_score + "-" + away_score + " " + away_name +
+            "<br/>" + date.strftime("%A %d %B %Y") + "</p>"
         )
-
-        is_league = any(
-            kw in comp_name.lower() for kw in LEAGUE_COMP_KEYWORDS
-        )
-        if is_league and standings_table:
-            description += "\n<h3>League Two Table</h3>\n" + standings_table
+        if any(kw in comp_name.lower() for kw in LEAGUE_KEYWORDS) and table_html:
+            description += "\n<h3>League Table</h3>\n" + table_html
 
         results.append({
             "title":       title,
             "date":        date,
             "link":        link,
             "description": description,
-            "guid":        link,
         })
 
-    results.sort(key=lambda x: x["date"], reverse=True)
-    return results[:20]
+    results.sort(key=lambda r: r["date"], reverse=True)
+    return results[:MAX_RESULTS]
 
 
-def generate_rss(results):
-    rss     = ET.Element("rss")
-    rss.set("version", "2.0")
+# ── RSS generation ────────────────────────────────────────────────────────────
+
+def write_rss(results):
+    rss     = ET.Element("rss", version="2.0")
     channel = ET.SubElement(rss, "channel")
 
-    ET.SubElement(channel, "title").text = "Harrogate Town FC - Recent Results"
-    ET.SubElement(channel, "link").text  = "https://www.harrogatetownafc.com/"
-    ET.SubElement(channel, "description").text = (
-        "Latest match results for Harrogate Town FC (EFL League Two)"
-    )
-    ET.SubElement(channel, "language").text      = "en-gb"
+    ET.SubElement(channel, "title").text       = TEAM_NAME + " FC - Recent Results"
+    ET.SubElement(channel, "link").text        = "https://www.espn.co.uk/football/club/_/id/" + TEAM_ID
+    ET.SubElement(channel, "description").text = "Latest match results for " + TEAM_NAME
+    ET.SubElement(channel, "language").text    = "en-gb"
     ET.SubElement(channel, "lastBuildDate").text = (
         datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
     )
 
     for r in results:
         item = ET.SubElement(channel, "item")
-        ET.SubElement(item, "title").text = r["title"]
-        ET.SubElement(item, "link").text  = r["link"]
+        ET.SubElement(item, "title").text   = r["title"]
+        ET.SubElement(item, "link").text    = r["link"]
+        ET.SubElement(item, "guid").text    = r["link"]
+        ET.SubElement(item, "pubDate").text = r["date"].strftime("%a, %d %b %Y %H:%M:%S +0000")
 
-        # Use CDATA so HTML in the description isn't entity-escaped
+        # Wrap HTML description in CDATA
         desc = ET.SubElement(item, "description")
-        desc.text = None
         desc.append(ET.Comment(" --><![CDATA[" + r["description"] + "]]><!-- "))
 
-        ET.SubElement(item, "pubDate").text = (
-            r["date"].strftime("%a, %d %b %Y %H:%M:%S +0000")
-        )
-        ET.SubElement(item, "guid").text = r["guid"]
-
-    tree = ET.ElementTree(rss)
-    ET.indent(tree, space="  ")
-
-    # ET.Comment wrapping produces slightly malformed CDATA, so fix it
+    ET.indent(rss, space="  ")
     raw = ET.tostring(rss, encoding="unicode")
-    raw = raw.replace(
-        "<!-- --><![CDATA[", "<![CDATA["
-    ).replace(
-        "]]><!-- -->", "]]>"
-    )
+    raw = raw.replace("<!-- --><![CDATA[", "<![CDATA[").replace("]]><!-- -->", "]]>")
 
     with open("rss.xml", "w", encoding="utf-8") as f:
         f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -235,11 +188,12 @@ def generate_rss(results):
     print("rss.xml written with " + str(len(results)) + " results.")
 
 
+# ── Main ──────────────────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
-    standings_rows  = fetch_standings()
-    standings_table = format_standings_table(standings_rows)
-    results         = fetch_results(standings_table)
-    if not results:
-        print("WARNING: No results found.")
+    table   = standings_html(fetch_standings())
+    results = fetch_results(table)
+    if results:
+        write_rss(results)
     else:
-        generate_rss(results)
+        print("WARNING: No results found.")
