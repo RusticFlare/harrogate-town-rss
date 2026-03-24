@@ -136,19 +136,32 @@ def fetch_results(standings_table):
             hs, as_ = int(home_score), int(away_score)
             if is_home:
                 outcome = "W" if hs > as_ else ("D" if hs == as_ else "L")
-                score   = str(hs) + "-" + str(as_)
+                title = (
+                    "[" + outcome + "] " + TEAM_NAME + " " + str(hs) + "-" + str(as_) + " " + opp +
+                    " - " + comp_name +
+                    " - " + date.strftime("%d %b %Y")
+                )
             else:
                 outcome = "W" if as_ > hs else ("D" if hs == as_ else "L")
-                score   = str(as_) + "-" + str(hs)
+                title = (
+                    "[" + outcome + "] " + opp + " " + str(hs) + "-" + str(as_) + " " + TEAM_NAME +
+                    " - " + comp_name +
+                    " - " + date.strftime("%d %b %Y")
+                )
         except ValueError:
             outcome = "?"
-            score   = home_score + "-" + away_score
-
-        title = (
-            "[" + outcome + "] " + TEAM_NAME + " " + score + " " + opp +
-            " - " + comp_name +
-            " - " + date.strftime("%d %b %Y")
-        )
+            if is_home:
+                title = (
+                    "[?] " + TEAM_NAME + " " + home_score + "-" + away_score + " " + opp +
+                    " - " + comp_name +
+                    " - " + date.strftime("%d %b %Y")
+                )
+            else:
+                title = (
+                    "[?] " + opp + " " + away_score + "-" + home_score + " " + TEAM_NAME +
+                    " - " + comp_name +
+                    " - " + date.strftime("%d %b %Y")
+                )
 
         description = (
             "<p><strong>Full-time:</strong> " + home_name + " " + home_score +
