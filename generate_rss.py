@@ -181,14 +181,14 @@ def write_atom(results):
         atom_el(entry, "published", r["date"].strftime("%Y-%m-%dT%H:%M:%SZ"))
         atom_el(entry, "updated",   r["date"].strftime("%Y-%m-%dT%H:%M:%SZ"))
         # Use a placeholder replaced with CDATA after serialisation
-        atom_el(entry, "content",   "CONTENT_PLACEHOLDER_" + str(i), type="html")
+        atom_el(entry, "content", "CONTENT_PLACEHOLDER_" + str(i).zfill(3), type="html")
 
     ET.indent(feed, space="  ")
     raw = ET.tostring(feed, encoding="unicode", xml_declaration=False)
 
     for i, r in enumerate(results):
         raw = raw.replace(
-            "CONTENT_PLACEHOLDER_" + str(i),
+            "CONTENT_PLACEHOLDER_" + str(i).zfill(3),
             "<![CDATA[" + r["content"] + "]]>"
         )
 
