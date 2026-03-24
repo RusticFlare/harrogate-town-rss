@@ -116,13 +116,12 @@ def fetch_results(table_html):
         is_home    = TEAM_NAME in home_name
 
         try:
-            hs, as_    = int(home_score), int(away_score)
-            our_score  = hs if is_home else as_
-            opp_score  = as_ if is_home else hs
-            outcome    = "W" if our_score > opp_score else ("D" if our_score == opp_score else "L")
-            score_str  = str(hs) + "-" + str(as_)
+            hs, as_   = int(home_score), int(away_score)
+            our_score = hs if is_home else as_
+            opp_score = as_ if is_home else hs
+            outcome   = "W" if our_score > opp_score else ("D" if our_score == opp_score else "L")
+            score_str = str(hs) + "-" + str(as_)
         except ValueError:
-            hs = as_ = None
             outcome   = "?"
             score_str = home_score + "-" + away_score
 
@@ -133,63 +132,71 @@ def fetch_results(table_html):
             " - " + date.strftime("%d %b %Y")
         )
 
-        description = (
+        content = (
             "<p><strong>Full-time:</strong> " +
             home_name + " " + home_score + "-" + away_score + " " + away_name +
             "<br/>" + date.strftime("%A %d %B %Y") + "</p>"
         )
         if any(kw in comp_name.lower() for kw in LEAGUE_KEYWORDS) and table_html:
-            description += "\n<h3>League Table</h3>\n" + table_html
+            content += "\n<h3>League Table</h3>\n" + table_html
 
         results.append({
-            "title":       title,
-            "date":        date,
-            "link":        link,
-            "description": description,
+            "title":   title,
+            "date":    date,
+            "link":    link,
+            "content": content,
         })
 
     results.sort(key=lambda r: r["date"], reverse=True)
     return results[:MAX_RESULTS]
 
 
-# ── RSS generation ────────────────────────────────────────────────────────────
+# ── Atom feed generation ──────────────────────────────────────────────────────
 
-def write_rss(results):
-    rss     = ET.Element("rss", version="2.0")
-    channel = ET.SubElement(rss, "channel")
+ATOM = "http://www.w3.org/2005/Atom"
 
-    ET.SubElement(channel, "title").text        = TEAM_NAME + " - Recent Results"
-    ET.SubElement(channel, "link").text         = "https://www.espn.co.uk/football/club/_/id/" + TEAM_ID
-    ET.SubElement(channel, "description").text  = "Latest match results for " + TEAM_NAME
-    ET.SubElement(channel, "language").text     = "en-gb"
-    ET.SubElement(channel, "lastBuildDate").text = (
-        datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
-    )
+def atom_el(parent, tag, text=None, **attrs):
+    el = ET.SubElement(parent, "{" + ATOM + "}" + tag, **attrs)
+    if text is not None:
+        el.text = text
+    return el
+
+
+def write_atom(results):
+    ET.register_namespace("", ATOM)
+    feed = ET.Element("{" + ATOM + "}feed")
+
+    atom_el(feed, "title",    TEAM_NAME + " - Recent Results")
+    atom_el(feed, "link",     href="https://www.espn.co.uk/football/club/_/id/" + TEAM_ID)
+    atom_el(feed, "link",     rel="self", href="feed.xml")
+    atom_el(feed, "id",       "https://www.espn.co.uk/football/club/_/id/" + TEAM_ID)
+    atom_el(feed, "subtitle", "Latest match results for " + TEAM_NAME)
+    atom_el(feed, "updated",  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     for i, r in enumerate(results):
-        item = ET.SubElement(channel, "item")
-        ET.SubElement(item, "title").text   = r["title"]
-        ET.SubElement(item, "link").text    = r["link"]
-        ET.SubElement(item, "guid").text    = r["link"]
-        ET.SubElement(item, "pubDate").text = r["date"].strftime("%a, %d %b %Y %H:%M:%S +0000")
-        # Use a unique placeholder — replaced with CDATA after serialisation
-        ET.SubElement(item, "description").text = "DESCRIPTION_PLACEHOLDER_" + str(i)
+        entry = atom_el(feed, "entry")
+        atom_el(entry, "title",     r["title"])
+        atom_el(entry, "link",      href=r["link"])
+        atom_el(entry, "id",        r["link"])
+        atom_el(entry, "published", r["date"].strftime("%Y-%m-%dT%H:%M:%SZ"))
+        atom_el(entry, "updated",   r["date"].strftime("%Y-%m-%dT%H:%M:%SZ"))
+        # Use a placeholder replaced with CDATA after serialisation
+        atom_el(entry, "content",   "CONTENT_PLACEHOLDER_" + str(i), type="html")
 
-    ET.indent(rss, space="  ")
-    raw = ET.tostring(rss, encoding="unicode")
+    ET.indent(feed, space="  ")
+    raw = ET.tostring(feed, encoding="unicode", xml_declaration=False)
 
-    # Swap each placeholder for a proper CDATA block
     for i, r in enumerate(results):
         raw = raw.replace(
-            "DESCRIPTION_PLACEHOLDER_" + str(i),
-            "<![CDATA[" + r["description"] + "]]>"
+            "CONTENT_PLACEHOLDER_" + str(i),
+            "<![CDATA[" + r["content"] + "]]>"
         )
 
-    with open("rss.xml", "w", encoding="utf-8") as f:
+    with open("feed.xml", "w", encoding="utf-8") as f:
         f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         f.write(raw)
 
-    print("rss.xml written with " + str(len(results)) + " results.")
+    print("feed.xml written with " + str(len(results)) + " entries.")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -198,6 +205,6 @@ if __name__ == "__main__":
     table   = standings_html(fetch_standings())
     results = fetch_results(table)
     if results:
-        write_rss(results)
+        write_atom(results)
     else:
         print("WARNING: No results found.")
