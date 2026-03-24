@@ -41,11 +41,15 @@ def fetch_results():
         home_score = home.get("score", {}).get("displayValue", "?")
         away_score = away.get("score", {}).get("displayValue", "?")
 
-        event_id    = event.get("id", "")
-        link        = "https://www.espn.co.uk/football/match/_/gameId/" + event_id
-        is_home     = TEAM_NAME in home_name
-        venue_label = "H" if is_home else "A"
-        opp         = away_name if is_home else home_name
+        comp_name = (
+            competition.get("type", {}).get("text", "")
+            or event.get("league", {}).get("name", "Unknown Competition")
+        )
+
+        event_id = event.get("id", "")
+        link     = "https://www.espn.co.uk/football/match/_/gameId/" + event_id
+        is_home  = TEAM_NAME in home_name
+        opp      = away_name if is_home else home_name
 
         try:
             hs, as_ = int(home_score), int(away_score)
@@ -61,7 +65,8 @@ def fetch_results():
 
         title = (
             "[" + outcome + "] " + TEAM_NAME + " " + score + " " + opp +
-            " (" + venue_label + ") - " + date.strftime("%d %b %Y")
+            " - " + comp_name +
+            " - " + date.strftime("%d %b %Y")
         )
         description = (
             "Full-time: " + home_name + " " + home_score +
