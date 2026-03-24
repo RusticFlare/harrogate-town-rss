@@ -22,24 +22,27 @@ def fetch_standings():
     except Exception:
         return None
 
-    rows = []
-    for group in data.get("standings", []):
-        for entry in group.get("entries", []):
-            team = entry.get("team", {}).get("displayName", "?")
-            stats = {s["name"]: s.get("displayValue", "?")
-                     for s in entry.get("stats", [])}
-            rows.append({
-                "pos":    stats.get("rank", "?"),
-                "team":   team,
-                "played": stats.get("gamesPlayed", "?"),
-                "won":    stats.get("wins", "?"),
-                "drawn":  stats.get("ties", "?"),
-                "lost":   stats.get("losses", "?"),
-                "gd":     stats.get("pointDifferential", "?"),
-                "points": stats.get("points", "?"),
-            })
+    try:
+        entries = data["children"][0]["standings"]["entries"]
+    except (KeyError, IndexError):
+        return None
 
-    # Sort by position
+    rows = []
+    for entry in entries:
+        team  = entry.get("team", {}).get("displayName", "?")
+        stats = {s["name"]: s.get("displayValue", "?")
+                 for s in entry.get("stats", [])}
+        rows.append({
+            "pos":    stats.get("rank", "?"),
+            "team":   team,
+            "played": stats.get("gamesPlayed", "?"),
+            "won":    stats.get("wins", "?"),
+            "drawn":  stats.get("ties", "?"),
+            "lost":   stats.get("losses", "?"),
+            "gd":     stats.get("pointDifferential", "?"),
+            "points": stats.get("points", "?"),
+        })
+
     try:
         rows.sort(key=lambda r: int(r["pos"]))
     except (ValueError, TypeError):
@@ -51,13 +54,6 @@ def fetch_standings():
 def format_standings_table(rows):
     if not rows:
         return ""
-
-    # Find Harrogate's position for context
-    harrogate_pos = None
-    for r in rows:
-        if TEAM_NAME in r["team"]:
-            harrogate_pos = r["pos"]
-            break
 
     lines = []
     lines.append("League Two Table:")
@@ -153,7 +149,6 @@ def fetch_results(standings_table):
             date.strftime("%A %d %B %Y") + "."
         )
 
-        # Append standings table for league matches only
         is_league = any(
             kw in comp_name.lower() for kw in LEAGUE_COMP_KEYWORDS
         )
