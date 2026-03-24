@@ -18,14 +18,14 @@ MAX_RESULTS = 20
 
 # ── ESPN API endpoints (derived from config above) ───────────────────────────
 
-SCHEDULE_URL  = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE_ID}/teams/{TEAM_ID}/schedule"
-STANDINGS_URL = f"https://site.api.espn.com/apis/v2/sports/soccer/{LEAGUE_ID}/standings"
+SCHEDULE_URL  = "https://site.api.espn.com/apis/site/v2/sports/soccer/" + LEAGUE_ID + "/teams/" + TEAM_ID + "/schedule"
+STANDINGS_URL = "https://site.api.espn.com/apis/v2/sports/soccer/" + LEAGUE_ID + "/standings"
 
 # ── Standings ─────────────────────────────────────────────────────────────────
 
 def fetch_standings():
     try:
-        data = requests.get(STANDINGS_URL, timeout=10).json()
+        data    = requests.get(STANDINGS_URL, timeout=10).json()
         entries = data["children"][0]["standings"]["entries"]
     except Exception:
         return []
@@ -56,8 +56,8 @@ def standings_html(rows):
     def th(label):
         return "<th>" + label + "</th>"
 
-    def td(value, bold=False):
-        return ("<td><strong>" + str(value) + "</strong></td>") if bold else ("<td>" + str(value) + "</td>")
+    def td(value):
+        return "<td>" + str(value) + "</td>"
 
     html  = "<table>\n<thead><tr>"
     html += th("Pos") + th("Team") + th("P") + th("W") + th("D") + th("L") + th("GD") + th("Pts")
@@ -87,13 +87,11 @@ def fetch_results(table_html):
     results = []
 
     for event in data.get("events", []):
-        # Parse date
         try:
             date = datetime.fromisoformat(event["date"].replace("Z", "+00:00"))
         except Exception:
             continue
 
-        # Skip future matches
         if date >= now:
             continue
 
@@ -112,19 +110,18 @@ def fetch_results(table_html):
         event_id   = event.get("id", "")
         link       = "https://www.espn.co.uk/football/match/_/gameId/" + event_id
         is_home    = TEAM_NAME in home_name
-        opp        = away_name if is_home else home_name
 
-        # Determine outcome from our team's perspective
         try:
-            hs, as_ = int(home_score), int(away_score)
-            our_score, opp_score = (hs, as_) if is_home else (as_, hs)
-            outcome = "W" if our_score > opp_score else ("D" if our_score == opp_score else "L")
+            hs, as_    = int(home_score), int(away_score)
+            our_score  = hs if is_home else as_
+            opp_score  = as_ if is_home else hs
+            outcome    = "W" if our_score > opp_score else ("D" if our_score == opp_score else "L")
+            score_str  = str(hs) + "-" + str(as_)
         except ValueError:
-            hs = as_ = our_score = opp_score = None
-            outcome = "?"
+            hs = as_ = None
+            outcome   = "?"
+            score_str = home_score + "-" + away_score
 
-        # Title: home team first, then away team
-        score_str = (str(hs) + "-" + str(as_)) if hs is not None else (home_score + "-" + away_score)
         title = (
             "[" + outcome + "] " +
             home_name + " " + score_str + " " + away_name +
@@ -132,7 +129,6 @@ def fetch_results(table_html):
             " - " + date.strftime("%d %b %Y")
         )
 
-        # Description: result line + standings for league matches
         description = (
             "<p><strong>Full-time:</strong> " +
             home_name + " " + home_score + "-" + away_score + " " + away_name +
@@ -158,28 +154,32 @@ def write_rss(results):
     rss     = ET.Element("rss", version="2.0")
     channel = ET.SubElement(rss, "channel")
 
-    ET.SubElement(channel, "title").text       = TEAM_NAME + " FC - Recent Results"
-    ET.SubElement(channel, "link").text        = "https://www.espn.co.uk/football/club/_/id/" + TEAM_ID
-    ET.SubElement(channel, "description").text = "Latest match results for " + TEAM_NAME
-    ET.SubElement(channel, "language").text    = "en-gb"
+    ET.SubElement(channel, "title").text        = TEAM_NAME + " - Recent Results"
+    ET.SubElement(channel, "link").text         = "https://www.espn.co.uk/football/club/_/id/" + TEAM_ID
+    ET.SubElement(channel, "description").text  = "Latest match results for " + TEAM_NAME
+    ET.SubElement(channel, "language").text     = "en-gb"
     ET.SubElement(channel, "lastBuildDate").text = (
         datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
     )
 
-    for r in results:
+    for i, r in enumerate(results):
         item = ET.SubElement(channel, "item")
         ET.SubElement(item, "title").text   = r["title"]
         ET.SubElement(item, "link").text    = r["link"]
         ET.SubElement(item, "guid").text    = r["link"]
         ET.SubElement(item, "pubDate").text = r["date"].strftime("%a, %d %b %Y %H:%M:%S +0000")
-
-        # Wrap HTML description in CDATA
-        desc = ET.SubElement(item, "description")
-        desc.append(ET.Comment(" --><![CDATA[" + r["description"] + "]]><!-- "))
+        # Use a unique placeholder — replaced with CDATA after serialisation
+        ET.SubElement(item, "description").text = "DESCRIPTION_PLACEHOLDER_" + str(i)
 
     ET.indent(rss, space="  ")
     raw = ET.tostring(rss, encoding="unicode")
-    raw = raw.replace("<!-- --><![CDATA[", "<![CDATA[").replace("]]><!-- -->", "]]>")
+
+    # Swap each placeholder for a proper CDATA block
+    for i, r in enumerate(results):
+        raw = raw.replace(
+            "DESCRIPTION_PLACEHOLDER_" + str(i),
+            "<![CDATA[" + r["description"] + "]]>"
+        )
 
     with open("rss.xml", "w", encoding="utf-8") as f:
         f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
