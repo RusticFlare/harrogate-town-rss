@@ -37,11 +37,20 @@ jobs:
       - name: Generate RSS
         run: python generate_rss.py
 
-      - name: Commit and push if changed
+      - name: Commit and push if meaningful changes
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add feed.xml
-          git diff --cached --quiet || git commit -m "chore: update RSS feed [skip ci]"
-          git push
-  
+
+          # Filter out <updated> line changes
+          DIFF=$(git diff --cached -U0 feed.xml | grep -v '<updated>' | grep '^[+-]')
+
+          if [ -n "$DIFF" ]; then
+            echo "Meaningful changes detected"
+            git commit -m "chore: update RSS feed [skip ci]"
+            git push
+          else
+            echo "Only <updated> changed — skipping commit"
+          fi
