@@ -42,24 +42,24 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # Save old version (if exists)
+          if [ -f feed.xml ]; then
+            cp feed.xml old_feed.xml
+          else
+            touch old_feed.xml
+          fi
+
           git add feed.xml
 
-          # Extract only real content changes:
-          # 1. Lines starting with + or -
-          # 2. Exclude diff headers (---, +++)
-          # 3. Strip +/- prefixes
-          # 4. Ignore <updated> line
-          DIFF=$(git diff --cached -U0 feed.xml \
-            | grep -E '^[+-]' \
-            | grep -vE '^(\+\+\+|---)' \
-            | sed 's/^[+-]//' \
-            | grep -v '^\s*<updated>.*</updated>\s*$')
+          # Create cleaned versions (remove <updated> lines)
+          sed '/<updated>/d' old_feed.xml > old_clean.xml
+          sed '/<updated>/d' feed.xml > new_clean.xml
 
-          if [ -n "$DIFF" ]; then
-            echo "Meaningful changes detected:"
-            echo "$DIFF"
+          # Compare cleaned files
+          if cmp -s old_clean.xml new_clean.xml; then
+            echo "Only <updated> changed — skipping commit"
+          else
+            echo "Meaningful changes detected"
             git commit -m "chore: update RSS feed [skip ci]"
             git push
-          else
-            echo "Only <updated> changed — skipping commit"
           fi
