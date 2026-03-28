@@ -102,7 +102,12 @@ def write_atom(results):
     atom_el(feed, "link",     rel="self", href="feed.xml")
     atom_el(feed, "id",       "https://www.espn.co.uk/football/club/_/id/" + TEAM_ID)
     atom_el(feed, "subtitle", "Latest match results for " + TEAM_NAME)
-    atom_el(feed, "updated",  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
+    if results:
+        latest_updated = max(r["date"] for r in results)
+    else:
+        latest_updated = datetime.now(timezone.utc)
+
+    atom_el(feed, "updated", latest_updated.strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     for r in results:
         entry = atom_el(feed, "entry")
