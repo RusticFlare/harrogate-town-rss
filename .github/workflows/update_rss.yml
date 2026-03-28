@@ -44,11 +44,15 @@ jobs:
 
           git add feed.xml
 
-          # Filter out <updated> line changes
-          DIFF=$(git diff --cached -U0 feed.xml | grep -v '<updated>' | grep '^[+-]')
+          # Extract changed lines, remove +/- prefixes, ignore <updated> line
+          DIFF=$(git diff --cached -U0 feed.xml \
+            | grep -E '^[+-]' \
+            | sed 's/^[+-]//' \
+            | grep -v '^\s*<updated>.*</updated>\s*$')
 
           if [ -n "$DIFF" ]; then
-            echo "Meaningful changes detected"
+            echo "Meaningful changes detected:"
+            echo "$DIFF"
             git commit -m "chore: update RSS feed [skip ci]"
             git push
           else
