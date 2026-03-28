@@ -37,29 +37,11 @@ jobs:
       - name: Generate RSS
         run: python generate_rss.py
 
-      - name: Commit and push if meaningful changes
+      - name: Commit and push if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Save old version (if exists)
-          if [ -f feed.xml ]; then
-            cp feed.xml old_feed.xml
-          else
-            touch old_feed.xml
-          fi
-
           git add feed.xml
-
-          # Create cleaned versions (remove <updated> lines)
-          sed '/<updated>/d' old_feed.xml > old_clean.xml
-          sed '/<updated>/d' feed.xml > new_clean.xml
-
-          # Compare cleaned files
-          if cmp -s old_clean.xml new_clean.xml; then
-            echo "Only <updated> changed — skipping commit"
-          else
-            echo "Meaningful changes detected"
-            git commit -m "chore: update RSS feed [skip ci]"
-            git push
-          fi
+          git diff --cached --quiet || git commit -m "chore: update RSS feed [skip ci]"
+          git push
+  
