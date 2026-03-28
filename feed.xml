@@ -5,7 +5,15 @@
   <link rel="self" href="feed.xml" />
   <id>https://www.espn.co.uk/football/club/_/id/19262</id>
   <subtitle>Latest match results for Harrogate Town</subtitle>
-  <updated>2026-03-28T07:49:22Z</updated>
+  <updated>2026-03-28T16:27:38Z</updated>
+  <entry>
+    <title>[L] Harrogate Town 0-2 Notts County - English League Two - 28 Mar 2026</title>
+    <link href="https://www.espn.co.uk/football/match/_/gameId/746180" />
+    <id>https://www.espn.co.uk/football/match/_/gameId/746180</id>
+    <published>2026-03-28T12:30:00Z</published>
+    <updated>2026-03-28T12:30:00Z</updated>
+    <content type="text">Full-time: Harrogate Town 0-2 Notts County (Saturday 28 March 2026)</content>
+  </entry>
   <entry>
     <title>[L] Oldham Athletic 1-0 Harrogate Town - English League Two - 21 Mar 2026</title>
     <link href="https://www.espn.co.uk/football/match/_/gameId/746168" />
@@ -157,13 +165,5 @@
     <published>2025-12-20T15:00:00Z</published>
     <updated>2025-12-20T15:00:00Z</updated>
     <content type="text">Full-time: Harrogate Town 0-4 Milton Keynes Dons (Saturday 20 December 2025)</content>
-  </entry>
-  <entry>
-    <title>[D] Cheltenham Town 1-1 Harrogate Town - English League Two - 13 Dec 2025</title>
-    <link href="https://www.espn.co.uk/football/match/_/gameId/745934" />
-    <id>https://www.espn.co.uk/football/match/_/gameId/745934</id>
-    <published>2025-12-13T15:00:00Z</published>
-    <updated>2025-12-13T15:00:00Z</updated>
-    <content type="text">Full-time: Cheltenham Town 1-1 Harrogate Town (Saturday 13 December 2025)</content>
   </entry>
 </feed>
