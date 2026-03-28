@@ -44,9 +44,14 @@ jobs:
 
           git add feed.xml
 
-          # Extract changed lines, remove +/- prefixes, ignore <updated> line
+          # Extract only real content changes:
+          # 1. Lines starting with + or -
+          # 2. Exclude diff headers (---, +++)
+          # 3. Strip +/- prefixes
+          # 4. Ignore <updated> line
           DIFF=$(git diff --cached -U0 feed.xml \
             | grep -E '^[+-]' \
+            | grep -vE '^(\+\+\+|---)' \
             | sed 's/^[+-]//' \
             | grep -v '^\s*<updated>.*</updated>\s*$')
 
