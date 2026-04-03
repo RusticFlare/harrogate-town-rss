@@ -5,7 +5,15 @@
   <link rel="self" href="feed.xml" />
   <id>https://www.espn.co.uk/football/club/_/id/19262</id>
   <subtitle>Latest match results for Harrogate Town</subtitle>
-  <updated>2026-03-28T12:30:00Z</updated>
+  <updated>2026-04-03T14:00:00Z</updated>
+  <entry>
+    <title>[W] Grimsby Town 1-3 Harrogate Town - English League Two - 03 Apr 2026</title>
+    <link href="https://www.espn.co.uk/football/match/_/gameId/746190" />
+    <id>https://www.espn.co.uk/football/match/_/gameId/746190</id>
+    <published>2026-04-03T14:00:00Z</published>
+    <updated>2026-04-03T14:00:00Z</updated>
+    <content type="text">Full-time: Grimsby Town 1-3 Harrogate Town (Friday 03 April 2026)</content>
+  </entry>
   <entry>
     <title>[L] Harrogate Town 0-2 Notts County - English League Two - 28 Mar 2026</title>
     <link href="https://www.espn.co.uk/football/match/_/gameId/746180" />
@@ -157,13 +165,5 @@
     <published>2025-12-26T15:00:00Z</published>
     <updated>2025-12-26T15:00:00Z</updated>
     <content type="text">Full-time: Salford City 1-0 Harrogate Town (Friday 26 December 2025)</content>
-  </entry>
-  <entry>
-    <title>[L] Harrogate Town 0-4 Milton Keynes Dons - English League Two - 20 Dec 2025</title>
-    <link href="https://www.espn.co.uk/football/match/_/gameId/745951" />
-    <id>https://www.espn.co.uk/football/match/_/gameId/745951</id>
-    <published>2025-12-20T15:00:00Z</published>
-    <updated>2025-12-20T15:00:00Z</updated>
-    <content type="text">Full-time: Harrogate Town 0-4 Milton Keynes Dons (Saturday 20 December 2025)</content>
   </entry>
 </feed>
