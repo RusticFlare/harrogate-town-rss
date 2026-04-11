@@ -5,7 +5,15 @@
   <link rel="self" href="feed.xml" />
   <id>https://www.espn.co.uk/football/club/_/id/19262</id>
   <subtitle>Latest match results for Harrogate Town</subtitle>
-  <updated>2026-04-06T14:00:00Z</updated>
+  <updated>2026-04-11T14:00:00Z</updated>
+  <entry>
+    <title>[L] Newport County 2-1 Harrogate Town - English League Two - 11 Apr 2026</title>
+    <link href="https://www.espn.co.uk/football/match/_/gameId/746215" />
+    <id>https://www.espn.co.uk/football/match/_/gameId/746215</id>
+    <published>2026-04-11T14:00:00Z</published>
+    <updated>2026-04-11T14:00:00Z</updated>
+    <content type="text">Full-time: Newport County 2-1 Harrogate Town (Saturday 11 April 2026)</content>
+  </entry>
   <entry>
     <title>[L] Harrogate Town 2-3 Bristol Rovers - English League Two - 06 Apr 2026</title>
     <link href="https://www.espn.co.uk/football/match/_/gameId/746203" />
@@ -157,13 +165,5 @@
     <published>2026-01-01T15:00:00Z</published>
     <updated>2026-01-01T15:00:00Z</updated>
     <content type="text">Full-time: Harrogate Town 0-2 Tranmere Rovers (Thursday 01 January 2026)</content>
-  </entry>
-  <entry>
-    <title>[L] Accrington Stanley 1-0 Harrogate Town - English League Two - 29 Dec 2025</title>
-    <link href="https://www.espn.co.uk/football/match/_/gameId/745969" />
-    <id>https://www.espn.co.uk/football/match/_/gameId/745969</id>
-    <published>2025-12-29T19:45:00Z</published>
-    <updated>2025-12-29T19:45:00Z</updated>
-    <content type="text">Full-time: Accrington Stanley 1-0 Harrogate Town (Monday 29 December 2025)</content>
   </entry>
 </feed>
