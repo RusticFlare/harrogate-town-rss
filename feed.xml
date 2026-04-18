@@ -5,7 +5,15 @@
   <link rel="self" href="feed.xml" />
   <id>https://www.espn.co.uk/football/club/_/id/19262</id>
   <subtitle>Latest match results for Harrogate Town</subtitle>
-  <updated>2026-04-11T14:00:00Z</updated>
+  <updated>2026-04-18T14:00:00Z</updated>
+  <entry>
+    <title>[W] Harrogate Town 1-0 Colchester United - English League Two - 18 Apr 2026</title>
+    <link href="https://www.espn.co.uk/football/match/_/gameId/746223" />
+    <id>https://www.espn.co.uk/football/match/_/gameId/746223</id>
+    <published>2026-04-18T14:00:00Z</published>
+    <updated>2026-04-18T14:00:00Z</updated>
+    <content type="text">Full-time: Harrogate Town 1-0 Colchester United (Saturday 18 April 2026)</content>
+  </entry>
   <entry>
     <title>[L] Newport County 2-1 Harrogate Town - English League Two - 11 Apr 2026</title>
     <link href="https://www.espn.co.uk/football/match/_/gameId/746215" />
@@ -157,13 +165,5 @@
     <published>2026-01-10T15:00:00Z</published>
     <updated>2026-01-10T15:00:00Z</updated>
     <content type="text">Full-time: Crewe Alexandra 1-1 Harrogate Town (Saturday 10 January 2026)</content>
-  </entry>
-  <entry>
-    <title>[L] Harrogate Town 0-2 Tranmere Rovers - English League Two - 01 Jan 2026</title>
-    <link href="https://www.espn.co.uk/football/match/_/gameId/745987" />
-    <id>https://www.espn.co.uk/football/match/_/gameId/745987</id>
-    <published>2026-01-01T15:00:00Z</published>
-    <updated>2026-01-01T15:00:00Z</updated>
-    <content type="text">Full-time: Harrogate Town 0-2 Tranmere Rovers (Thursday 01 January 2026)</content>
   </entry>
 </feed>
